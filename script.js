@@ -1,193 +1,184 @@
-/* ========= DATA ========= */
-const USERS = [{ username: "admin", password: "12345", nama: "Admin" }];
-
-// Gambar dibuat otomatis (SVG). Untuk foto asli, isi `img`,
-// contoh: img: "images/sepatu1.jpg"
-const PRODUCTS = [
-  { id: 1, nama: "Sprint Air",    kategori: "Lari",   harga: 450000, warna: "#e4572e", bg: "#fbe3da" },
-  { id: 2, nama: "Urban Walk",    kategori: "Santai", harga: 380000, warna: "#14213d", bg: "#dfe3ee" },
-  { id: 3, nama: "Court Classic", kategori: "Casual", harga: 520000, warna: "#2a9d8f", bg: "#d9efec" },
-  { id: 4, nama: "Trail Master",  kategori: "Lari",   harga: 610000, warna: "#6a994e", bg: "#e4eedb" },
-  { id: 5, nama: "Kanvas Pagi",   kategori: "Santai", harga: 299000, warna: "#f4a261", bg: "#fdebd8" },
-  { id: 6, nama: "Street Hi-Top", kategori: "Casual", harga: 575000, warna: "#8338ec", bg: "#e9dcfa" },
+// ====== Data produk ======
+const products = [
+  { id: 1, name: "Sprint Pro",     cat: "Lari",   price: 749000, badge: "Terlaris", img: "images/sepatu-1.svg", sizes: [39,40,41,42,43] },
+  { id: 2, name: "Biru Laut",      cat: "Santai", price: 459000, img: "images/sepatu-2.svg", sizes: [38,39,40,41,42] },
+  { id: 3, name: "Hitam Klasik",   cat: "Formal", price: 599000, img: "images/sepatu-3.svg", sizes: [40,41,42,43,44] },
+  { id: 4, name: "Hutan Trail",    cat: "Lari",   price: 689000, img: "images/sepatu-4.svg", sizes: [39,40,41,42,43] },
+  { id: 5, name: "Kulit Cokelat",  cat: "Formal", price: 825000, badge: "Baru", img: "images/sepatu-5.svg", sizes: [40,41,42,43,44] },
+  { id: 6, name: "Kuning Harian",  cat: "Santai", price: 389000, img: "images/sepatu-6.svg", sizes: [37,38,39,40,41] },
 ];
+const WA_NUMBER = "6281234567890"; // ganti dengan nomor WhatsApp toko
 
-function shoeSVG(color) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260">
-  <ellipse cx="200" cy="235" rx="165" ry="14" fill="rgba(0,0,0,.12)"/>
-  <path d="M30 190 C30 150 60 140 90 120 L120 70 C130 55 150 55 160 68 L175 95 C200 110 250 115 300 130 C350 142 375 165 372 195 L372 205 Q372 215 360 215 L45 215 Q30 215 30 200 Z" fill="${color}"/>
-  <path d="M30 195 L372 195 L372 215 Q372 225 360 225 L45 225 Q30 225 30 210 Z" fill="#fff"/>
-  <path d="M30 195 L372 195" stroke="rgba(0,0,0,.15)" stroke-width="3"/>
-  <path d="M140 80 L165 108 M158 72 L182 100 M176 82 L198 108" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
-  <path d="M95 175 Q200 140 330 175" stroke="rgba(255,255,255,.7)" stroke-width="8" fill="none" stroke-linecap="round"/>
-  </svg>`;
-  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
-}
-PRODUCTS.forEach(p => { if (!p.img) p.img = shoeSVG(p.warna); });
+// ====== State ======
+let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+let activeCat = "Semua";
+let keyword = "";
+const selectedSize = {}; // id produk -> ukuran
 
-/* ========= HELPER ========= */
-const $ = id => document.getElementById(id);
+// ====== Elemen ======
+const grid = document.getElementById("productGrid");
+const emptyMsg = document.getElementById("emptyMsg");
+const drawer = document.getElementById("drawer");
+const overlay = document.getElementById("overlay");
+const cartItems = document.getElementById("cartItems");
+const cartTotal = document.getElementById("cartTotal");
+const cartCount = document.getElementById("cartCount");
+const toastEl = document.getElementById("toast");
+
 const rupiah = n => "Rp" + n.toLocaleString("id-ID");
-const getUser = () => JSON.parse(localStorage.getItem("user") || "null");
-const getCart = () => JSON.parse(localStorage.getItem("cart") || "[]");
-const saveCart = c => localStorage.setItem("cart", JSON.stringify(c));
 
-let toastTimer;
-function toast(msg) {
-  const el = $("toast");
-  el.textContent = msg; el.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
-}
-
-function updateCartCount() {
-  const n = getCart().reduce((s, i) => s + i.qty, 0);
-  document.querySelectorAll(".cart-count").forEach(el => el.textContent = n);
-}
-
-/* ========= LOGIN ========= */
-function setupLogin() {
-  $("login-visual").innerHTML = `<img src="${shoeSVG("#14213d")}" alt="Sepatu">`;
-
-  $("toggle-pass").addEventListener("click", () => {
-    const input = $("password");
-    const show = input.type === "password";
-    input.type = show ? "text" : "password";
-    $("toggle-pass").textContent = show ? "Sembunyi" : "Lihat";
-  });
-
-  $("login-form").addEventListener("submit", e => {
-    e.preventDefault();
-    const u = $("username").value.trim();
-    const p = $("password").value;
-    if (!u || !p) { $("login-error").textContent = "Isi username dan password."; return; }
-    const user = USERS.find(x => x.username === u && x.password === p);
-    if (!user) { $("login-error").textContent = "Username atau password salah. Coba lagi."; return; }
-    localStorage.setItem("user", JSON.stringify(user));
-    $("login-error").textContent = "";
-    location.hash = "toko";
-  });
-
-  $("logout").addEventListener("click", () => {
-    localStorage.removeItem("user");
-    $("login-form").reset();
-    location.hash = "login";
-  });
-}
-
-/* ========= TOKO ========= */
-let filter = "Semua";
-
-function renderFilters() {
-  const cats = ["Semua", ...new Set(PRODUCTS.map(p => p.kategori))];
-  $("filters").innerHTML = cats.map(c =>
-    `<button class="chip ${c === filter ? "active" : ""}" data-cat="${c}">${c}</button>`).join("");
-  $("filters").querySelectorAll(".chip").forEach(b =>
-    b.addEventListener("click", () => { filter = b.dataset.cat; renderFilters(); renderProducts(); }));
-}
-
+// ====== Tampilkan produk ======
 function renderProducts() {
-  const list = PRODUCTS.filter(p => filter === "Semua" || p.kategori === filter);
-  $("product-grid").innerHTML = list.map(p => `
+  const list = products.filter(p =>
+    (activeCat === "Semua" || p.cat === activeCat) &&
+    p.name.toLowerCase().includes(keyword.toLowerCase())
+  );
+  emptyMsg.hidden = list.length > 0;
+  grid.innerHTML = list.map(p => `
     <article class="card">
-      <div class="pic" style="background:${p.bg}"><img src="${p.img}" alt="${p.nama}"></div>
-      <div class="info">
-        <span class="cat">${p.kategori}</span>
-        <h3>${p.nama}</h3>
-        <span class="price">${rupiah(p.harga)}</span>
+      <div class="card-img">
+        <img src="${p.img}" alt="Sepatu ${p.name}" loading="lazy">
+        <span class="pill">${p.cat}</span>
+        ${p.badge ? `<span class="badge">${p.badge}</span>` : ""}
+      </div>
+      <div class="card-body">
+        <div class="row"><h3>${p.name}</h3><span class="price">${rupiah(p.price)}</span></div>
+        <div class="sizes" data-id="${p.id}">
+          ${p.sizes.map(s => `<button class="size ${selectedSize[p.id] === s ? "selected" : ""}" data-size="${s}">${s}</button>`).join("")}
+        </div>
         <button class="btn" data-add="${p.id}">Tambah ke keranjang</button>
       </div>
     </article>`).join("");
-  $("product-grid").querySelectorAll("[data-add]").forEach(b =>
-    b.addEventListener("click", () => addToCart(+b.dataset.add)));
 }
+
+// ====== Keranjang ======
+function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
 
 function addToCart(id) {
-  const cart = getCart();
-  const item = cart.find(i => i.id === id);
-  item ? item.qty++ : cart.push({ id, qty: 1 });
-  saveCart(cart); updateCartCount();
-  toast(PRODUCTS.find(p => p.id === id).nama + " masuk keranjang");
+  const size = selectedSize[id];
+  if (!size) return showToast("Pilih ukuran dulu");
+  const found = cart.find(i => i.id === id && i.size === size);
+  if (found) found.qty++; else cart.push({ id, size, qty: 1 });
+  saveCart(); renderCart();
+  showToast("Ditambahkan ke keranjang");
 }
 
-/* ========= KERANJANG ========= */
-function setupCart() {
-  $("checkout").addEventListener("click", () => {
-    const cart = getCart();
-    if (!cart.length) return toast("Keranjang masih kosong");
-    const total = cart.reduce((s, i) => s + PRODUCTS.find(p => p.id === i.id).harga * i.qty, 0);
-    saveCart([]);
-    $("cart-layout").hidden = true;
-    $("success").hidden = false;
-    $("success-msg").textContent = "Total pembayaran " + rupiah(total) + ". Terima kasih sudah berbelanja.";
-    updateCartCount();
+function changeQty(index, delta) {
+  cart[index].qty += delta;
+  if (cart[index].qty <= 0) cart.splice(index, 1);
+  saveCart(); renderCart();
+}
+
+function removeItem(index) {
+  cart.splice(index, 1);
+  saveCart(); renderCart();
+}
+
+function renderCart() {
+  let total = 0, count = 0;
+  if (cart.length === 0) {
+    cartItems.innerHTML = `<p class="cart-empty">Keranjang masih kosong. Pilih sepatu dulu ya.</p>`;
+  } else {
+    cartItems.innerHTML = cart.map((item, i) => {
+      const p = products.find(x => x.id === item.id);
+      total += p.price * item.qty; count += item.qty;
+      return `
+      <div class="cart-item">
+        <img src="${p.img}" alt="${p.name}">
+        <div>
+          <strong>${p.name}</strong><br>
+          <small>Ukuran ${item.size} · ${rupiah(p.price)}</small>
+          <div class="qty">
+            <button data-dec="${i}" aria-label="Kurangi">−</button>
+            <span>${item.qty}</span>
+            <button data-inc="${i}" aria-label="Tambah">+</button>
+          </div>
+        </div>
+        <button class="remove" data-remove="${i}">Hapus</button>
+      </div>`;
+    }).join("");
+  }
+  cartTotal.textContent = rupiah(total);
+  cartCount.textContent = count;
+}
+
+function toggleCart(open) {
+  drawer.classList.toggle("open", open);
+  drawer.setAttribute("aria-hidden", String(!open));
+  overlay.hidden = !open;
+}
+
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(showToast.t);
+  showToast.t = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+
+function checkout() {
+  if (cart.length === 0) return showToast("Keranjang masih kosong");
+  let text = "Halo, saya mau pesan:\n";
+  let total = 0;
+  cart.forEach(item => {
+    const p = products.find(x => x.id === item.id);
+    total += p.price * item.qty;
+    text += `- ${p.name} (ukuran ${item.size}) x${item.qty} = ${rupiah(p.price * item.qty)}\n`;
+  });
+  text += `Total: ${rupiah(total)}`;
+  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(text)}`, "_blank");
+}
+
+// ====== Event ======
+document.getElementById("filters").addEventListener("click", e => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+  chip.classList.add("active");
+  activeCat = chip.dataset.cat;
+  renderProducts();
+});
+
+document.getElementById("search").addEventListener("input", e => {
+  keyword = e.target.value;
+  renderProducts();
+});
+
+grid.addEventListener("click", e => {
+  const sizeBtn = e.target.closest(".size");
+  if (sizeBtn) {
+    const id = Number(sizeBtn.parentElement.dataset.id);
+    selectedSize[id] = Number(sizeBtn.dataset.size);
+    sizeBtn.parentElement.querySelectorAll(".size").forEach(b => b.classList.remove("selected"));
+    sizeBtn.classList.add("selected");
+    return;
+  }
+  const add = e.target.closest("[data-add]");
+  if (add) addToCart(Number(add.dataset.add));
+});
+
+cartItems.addEventListener("click", e => {
+  const t = e.target;
+  if (t.dataset.inc) changeQty(Number(t.dataset.inc), 1);
+  if (t.dataset.dec) changeQty(Number(t.dataset.dec), -1);
+  if (t.dataset.remove) removeItem(Number(t.dataset.remove));
+});
+
+document.getElementById("openCart").addEventListener("click", () => toggleCart(true));
+document.getElementById("closeCart").addEventListener("click", () => toggleCart(false));
+overlay.addEventListener("click", () => toggleCart(false));
+document.getElementById("checkout").addEventListener("click", checkout);
+document.addEventListener("keydown", e => { if (e.key === "Escape") toggleCart(false); });
+
+// ====== Hero miring mengikuti kursor ======
+const hero = document.querySelector(".hero");
+const heroShoe = document.querySelector(".hero-shoe");
+if (hero && heroShoe && matchMedia("(hover:hover)").matches) {
+  hero.addEventListener("mousemove", e => {
+    const x = (e.clientX / innerWidth - .5) * 2, y = (e.clientY / innerHeight - .5) * 2;
+    heroShoe.style.transform = `rotate(${-6 + x * 3}deg) translate(${x * 12}px, ${y * 8}px)`;
   });
 }
 
-function changeQty(id, d) {
-  let cart = getCart();
-  const item = cart.find(i => i.id === id);
-  item.qty += d;
-  if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
-  saveCart(cart); renderCart();
-}
-
-function removeItem(id) { saveCart(getCart().filter(i => i.id !== id)); renderCart(); }
-
-function renderCart() {
-  const cart = getCart();
-  updateCartCount();
-  if (!cart.length) {
-    $("cart-items").innerHTML = `<div class="empty"><p>Keranjang masih kosong.</p><a href="index.html" class="btn">Pilih sepatu</a></div>`;
-    $("cart-total").textContent = rupiah(0);
-    return;
-  }
-  let total = 0;
-  $("cart-items").innerHTML = cart.map(i => {
-    const p = PRODUCTS.find(x => x.id === i.id);
-    total += p.harga * i.qty;
-    return `
-    <div class="item">
-      <img src="${p.img}" alt="${p.nama}" style="background:${p.bg}">
-      <div>
-        <b>${p.nama}</b><br><span class="muted">${p.kategori} · ${rupiah(p.harga)}</span>
-        <div class="qty">
-          <button data-min="${p.id}" aria-label="Kurangi">−</button>
-          <span>${i.qty}</span>
-          <button data-plus="${p.id}" aria-label="Tambah">+</button>
-        </div>
-      </div>
-      <div class="right"><b>${rupiah(p.harga * i.qty)}</b><br><button class="del" data-del="${p.id}">Hapus</button></div>
-    </div>`;
-  }).join("");
-  $("cart-total").textContent = rupiah(total);
-  $("cart-items").querySelectorAll("[data-min]").forEach(b => b.onclick = () => changeQty(+b.dataset.min, -1));
-  $("cart-items").querySelectorAll("[data-plus]").forEach(b => b.onclick = () => changeQty(+b.dataset.plus, 1));
-  $("cart-items").querySelectorAll("[data-del]").forEach(b => b.onclick = () => removeItem(+b.dataset.del));
-}
-
-/* ========= ROUTER (pindah halaman lewat #hash) ========= */
-const VIEWS = ["login", "toko", "keranjang"];
-
-function route() {
-  const user = getUser();
-  let view = location.hash.slice(1);
-  if (!VIEWS.includes(view)) view = user ? "toko" : "login";
-  if (!user) view = "login";                 // wajib login
-  else if (view === "login") view = "toko";  // sudah login
-
-  VIEWS.forEach(v => $("view-" + v).hidden = v !== view);
-  $("topbar").hidden = view === "login";
-  $("nav-cart").hidden = view === "keranjang";
-  $("nav-shop").hidden = view !== "keranjang";
-  window.scrollTo(0, 0);
-
-  if (view === "toko") { $("welcome").textContent = "Halo, " + user.nama; renderFilters(); renderProducts(); }
-  if (view === "keranjang") { $("cart-layout").hidden = false; $("success").hidden = true; renderCart(); }
-  updateCartCount();
-}
-
-setupLogin();
-setupCart();
-window.addEventListener("hashchange", route);
-route();
+// ====== Mulai ======
+renderProducts();
+renderCart();
